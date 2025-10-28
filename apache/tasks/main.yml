@@ -1,0 +1,64 @@
+---
+# install httpd and config and start httpd
+
+- name: ensure pacage list is up to date
+  package:
+    name: "{{ httpd_package_name }}"
+    state: present
+  register: httpd_pkg
+
+- name: ensure the httpd service is enable and start
+  service:
+    name: "{{ httpd_service_name}}"
+    state: started
+    enabled: true
+  when: httpd_pkg is not failed
+
+- name: ensure the document root is exist
+  file:
+    path: "{{ httpd_document_root }}"
+    state: directory
+
+- name: deploy index.html from template
+  template:
+    src: index.html.j2
+    dest: "{{ httpd_document_root }}/index.html"
+  notify: restart httpd
+
+- name: Configure httpd to listen on port {{ httpd_listen_port }}
+  lineinfile:
+    path: "{{ httpd_conf_path }}"
+    regexp: '^Listen'
+    line: "Listen {{ httpd_listen_port }}"
+    state: present
+  notify: restart httpd
+
+- name: Add http port {{ httpd_listen_port }} to SELinux using semanage
+  become: true
+  shell: |
+    semanage port -l | grep -w {{ httpd_listen_port }}/tcp || semanage port -a -t http_port_t -p tcp {{ httpd_listen_port }}
+  when:
+    - ansible_facts['selinux']['status'] is defined
+    - ansible_facts['selinux']['status'] != 'disabled'
+  notify: restart httpd
+
+- name: open port{{ httpd_listen_port }}in firewall (if running)
+  when: ansible_facts['os_family']=='Redhat'
+  block:
+      - name: check if firewall is active
+        command: systemctl is-active firewalld
+        register: _firewalld_active
+        ignore_errors: true
+
+      - name: add httpd service to firewalld (permanent)
+        ansible.posix.firewalld:
+          port: "{{ httpd_listen_port }}/tcp"
+          permanent: true
+          state: enabled
+        when: _firewalld_active.rc==0
+
+      - name: Realod firewalld
+        ansible.posix.firewalld:
+          state: reloaded
+        when: _firewalld_active.rc==0
+

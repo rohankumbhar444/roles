@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: rohan kumbhar
+  description: "Simple httpd role to install and configure httpd"
+  company: ifuture
+  license: MIT
+dependencies: []

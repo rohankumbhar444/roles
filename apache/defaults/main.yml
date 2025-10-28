@@ -1,0 +1,7 @@
+---
+# defaults variable for httpd
+httpd_package_name: httpd
+httpd_service_name: httpd
+httpd_listen_port: 82
+httpd_document_root: /var/www/html
+httpd_index_content: "<h1>welcome from ansible-managed httpd<h1>"

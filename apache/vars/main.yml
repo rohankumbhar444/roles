@@ -1,0 +1,3 @@
+---
+#variables that are not override
+httpd_conf_path: /etc/httpd/conf/httpd.conf
